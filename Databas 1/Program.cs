@@ -1,139 +1,132 @@
 ﻿using Npgsql;
 using System;
 using System.Data;
+using System.Windows.Input;
 
 namespace Databas_1
 {
     class Program
     {
-        enum State
+        public enum State
         {
             Start,
-            Logged_in
+            Logged_in,
+            login,
+            register,
+            search,
+            view
 
         }
+        public static State currentstate;
+
 
 
         static void Main(string[] args)
         {
-            string connection = "Host=localhost;Username=miint2;Password=wbe4ngqu;Database=MAU";
-            State currentstate;
-            Console.WriteLine("Hello World!");
+            string connection = "Server=pgserver.mau.se;Port=5432;User Id = am3740; Password=cf0py2ta;Database=miint2;";
             Databas databas1 = new Databas();
-            string selectedDepCode = null;
-            currentstate = State.Logged_in;
+            currentstate = State.Start;
 
             //I början bör man få en meny som frågar om man ska logga in etc.
             switch (currentstate)
             {
-                case State.Logged_in:
-                    Console.WriteLine("Please Select one of the options below: " +
-                        "\n 1- Login" +
-                        "\n 2- Register" +
-                        "\n 3- Search for product" +
-                        "\n 4- See all products");
-                    string choice = Console.ReadLine();
-                    if (choice.Equals("1"))
-                    {
-                        Console.WriteLine("Enter your details: (email, password) " +
-                            "\n Note: Use commas(,) between the values");
-
-                        string[] info = Console.ReadLine().Split(",");
-                        using var con = new NpgsqlConnection(connection);
-                        con.Open();
-                        string sql = "call function_username_password(@email, @password)";
-                        using var cmd = new NpgsqlCommand(sql, con);
-                        cmd.Parameters.AddWithValue(parameterName: "@email", info[0]);
-                        cmd.Parameters.AddWithValue(parameterName: "@password", info[1]);
-
-
-                        using NpgsqlDataReader rdr = cmd.ExecuteReader();
-                       // rdr.Read();
-                        //if ( )
-
-                    }
-                    else if (choice.Equals("2"))
-                    {
-                        Console.WriteLine("\n Enter your details first (Email, FirstName, LastName, City, Adress)." +
-                            "\n Note: Use commas(,) between the values.");
-
-                        string[] details = Console.ReadLine().Split(",");
-                        databas1.Add_customer(details[0], details[1], details[2], details[3], details[4]);
-
-                        Console.WriteLine("\n Now choose a password: ");
-
-                        string password = Console.ReadLine();
-                        databas1.Add_password_to_customer(details[0], password);
-
-
-                    }
-
-
-
-                    break;
                 case State.Start:
-
+                    Start();
+                    
 
                     break;
-
-
 
 
             }
-
-
-            while (true)
+            void Login()
             {
-                Console.Write("Please Select one of the options below:" +
-                    "\n 1- List all Teachers" +
-                    "\n 2- Select department" +
-                    "\n 3- List all Teachers in department with selected code/id" +
-                    "\n 4- Select Teacher" +
-                    "\n 5- Raise Selected Teachers Salary"
-                    );
+                Console.WriteLine("Enter your details: (email, password) " +
+                               "\n Note: Use commas(,) between the values.\n");
+
+                string[] info = Console.ReadLine().Split(",");
+                var con = new NpgsqlConnection(connection);
+                con.Open();
+                string sql = "Select function_username_password(@email, @password)";
+                var cmd = new NpgsqlCommand(sql, con);
+                cmd.Parameters.AddWithValue(parameterName: "@email", info[0]);
+                cmd.Parameters.AddWithValue(parameterName: "@password", info[1]);
+                string[] input = Console.ReadLine().Split(",");
+
+                NpgsqlDataReader rdr = cmd.ExecuteReader();
+                while (rdr.Read())
+                {
+                    Console.WriteLine("----------------------"); //kanske console.clear();
+
+
+                    if (rdr.GetBoolean(ordinal: 0) == true)
+                    {
+                        Console.WriteLine("Welcome: " + Console.ReadLine());
+                    }
+                    else
+                    {
+                        Start();
+                    }
+
+
+                }
+            }
+            void Start()
+            {
+                Console.WriteLine("Please Select one of the options below: " +
+                    "\n 1- Login" +
+                    "\n 2- Register" +
+                    "\n 3- Search for product" +
+                    "\n 4- See all products\n");
                 string choice = Console.ReadLine();
                 if (choice.Equals("1"))
                 {
-                    databas1.PrintAllTeachers();
+                    Login();
                 }
                 else if (choice.Equals("2"))
                 {
-                    if (selectedDepCode == null)
-                    {
-                        throw new ArgumentNullException(paramName: nameof(selectedDepCode), message: "Parameter can't be null");
-                    }
-                    try
-                    {
-                        databas1.PrintTeachersByDepartment(int.Parse(selectedDepCode));
-                    }
-                    catch (ArgumentNullException e)
-                    {
-                        Console.WriteLine("{0} First exception caught.", e);
-                    }
-                    selectedDepCode = Console.ReadLine();
-                    Console.WriteLine("The selected department is: " + selectedDepCode);
+                    Register();
                 }
                 else if (choice.Equals("3"))
                 {
-                    databas1.PrintTeachersByDepartment(Convert.ToInt32(selectedDepCode));
-
+                    Search();
                 }
                 else if (choice.Equals("4"))
                 {
-
+                    View();
                 }
-                else if (choice.Equals("5"))
-                {
+            }
+            void Register()
+            {
+                Console.WriteLine("\n Enter your details first (Email, FirstName, LastName, City, Adress)." +
+                                "\n Note: Use commas(,) between the values.\n");
 
-                }
+                string[] details = Console.ReadLine().Split(",");
+                databas1.Add_customer(details[0], details[1], details[2], details[3], details[4]);
 
+                Console.WriteLine("\n Now choose a password: ");
+
+                string password = Console.ReadLine();
+                databas1.Add_password_to_customer(details[0], password);
+
+                Console.WriteLine("Account creation successful! \n Welcome: " + details[1] + " " + details[2]);
             }
 
+            void Search()
+            {
+                Console.Clear();
+                Console.WriteLine("Type the name of the product you want to search for: \n");
+                databas1.View_searched_product(Console.ReadLine());
+            }
+            void View()
+            {
+                Console.Clear();
+                databas1.View_all_products();
+            }
         }
     }
     class Databas
     {
-        string connection = "Host=localhost;Username=miint2;Password=wbe4ngqu;Database=MAU";
+        string connection = "Server=pgserver.mau.se;Port=5432;User Id = am3740; Password=cf0py2ta;Database=miint2;";
         public void PrintAllTeachers()
         {
             using var con = new NpgsqlConnection(connection);
@@ -152,40 +145,7 @@ namespace Databas_1
             }
             con.Close();
         }
-        public void PrintTeachersByDepartment(int deptCode)
-        {
-            using var con = new NpgsqlConnection(connection);
-            con.Open();
 
-            string sql = "Select * From \"teacher\" where department.dept_code=" + deptCode;
-            using var cmd = new NpgsqlCommand(sql, con);
-            using NpgsqlDataReader rdr = cmd.ExecuteReader();
-
-            while (rdr.Read())
-            {
-                Console.WriteLine("----------------------");
-                Console.WriteLine("ID: " + rdr.GetInt32(ordinal: 0));
-                Console.WriteLine("Name: " + rdr.GetString(ordinal: 1));
-                Console.WriteLine("Department code: " + rdr.GetInt32(ordinal: 2));
-                Console.WriteLine("Salary: " + rdr.GetInt32(ordinal: 3));
-            }
-            con.Close();
-
-
-        }
-        public void RaiseTeachersSalaries(int deptId, int perc)
-        {
-            using var con = new NpgsqlConnection(connection);
-
-            con.Open();
-            var transaction = con.BeginTransaction();
-            string sentencialSQL = "call raiseteachers(@deptId,@percentage)";
-            NpgsqlCommand command = new NpgsqlCommand(sentencialSQL, con);
-            command.Parameters.AddWithValue(parameterName: "@deptId", deptId);
-            command.Parameters.AddWithValue(parameterName: "@percentage", perc);
-            int affected = command.ExecuteNonQuery();
-            transaction.Commit();
-        }
         //------------------------------------////------------------------------------//
         public void Add_supplier_to_list(string supplier_name, int phonenr, string adress)
         {
@@ -313,6 +273,25 @@ namespace Databas_1
             con.Close();
         }
 
+        public void View_searched_product(string product_namn)
+        {
+            using var con = new NpgsqlConnection(connection);
+            con.Open();
+            string sql = "Select * FROM product where product.namn = " + product_namn;
+            using var cmd = new NpgsqlCommand(sql, con);
+            using NpgsqlDataReader rdr = cmd.ExecuteReader();
+
+            while (rdr.Read())
+            {
+                Console.WriteLine("----------------------");
+                Console.WriteLine("Product name: " + rdr.GetString(ordinal: 0));
+                Console.WriteLine("Supplier name: " + rdr.GetString(ordinal: 1));
+                Console.WriteLine("Quantity: " + rdr.GetInt32(ordinal: 2));
+                Console.WriteLine("Base price: " + rdr.GetInt32(ordinal: 3));
+            }
+            con.Close();
+        }
+
         public void Select_discount(int? id, float? percentage, string? reason)
         {
             using var con = new NpgsqlConnection(connection);
@@ -349,15 +328,15 @@ namespace Databas_1
             }
             con.Close();
         }
-       public void Add_password_to_customer(string email, string password)
+        public void Add_password_to_customer(string email, string password)
         {
             using var con = new NpgsqlConnection(connection);
             con.Open();
             var transaction = con.BeginTransaction();
             string sentencialSQL = "call add_password_to_customer(@email, @password)";
             NpgsqlCommand command = new NpgsqlCommand(sentencialSQL, con);
-            command.Parameters.AddWithValue(parameterName: "@email",email);
-            command.Parameters.AddWithValue(parameterName: "@password",password);
+            command.Parameters.AddWithValue(parameterName: "@email", email);
+            command.Parameters.AddWithValue(parameterName: "@password", password);
             transaction.Commit();
         }
 
