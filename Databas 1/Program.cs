@@ -17,12 +17,19 @@ namespace Databas_1
             view
 
         }
-        public static State currentstate;
 
+        enum Accessibilty
+        {
+            Admin,
+            User
+        }
+        public static State currentstate;
+        
 
 
         static void Main(string[] args)
         {
+            bool Admin=false;
             string connection = "Server=pgserver.mau.se;Port=5432;User Id = am3740; Password=cf0py2ta;Database=miint2;";
             Databas databas1 = new Databas();
             currentstate = State.Start;
@@ -32,7 +39,7 @@ namespace Databas_1
             {
                 case State.Start:
                     Start();
-                    
+
 
                     break;
 
@@ -60,7 +67,7 @@ namespace Databas_1
 
                     if (rdr.GetBoolean(ordinal: 0) == true)
                     {
-                        Console.WriteLine("Welcome: " + Console.ReadLine());
+                        Console.WriteLine("Welcome: " + databas1.Get_Customer_name(info[0]));
                     }
                     else
                     {
@@ -338,6 +345,36 @@ namespace Databas_1
             command.Parameters.AddWithValue(parameterName: "@email", email);
             command.Parameters.AddWithValue(parameterName: "@password", password);
             transaction.Commit();
+        }
+        public string Get_Customer_name(string email)
+        {
+            string fullname = null;
+            using var con = new NpgsqlConnection(connection);
+            con.Open();
+            
+            string SQL = "Select customer.f_namn, customer.l_namn from customer where customer.email = " + email;
+            using var cmd = new NpgsqlCommand(SQL, con);
+            
+            /*using NpgsqlDataReader rdr = cmd.ExecuteReader();
+            if (rdr.HasRows)
+            {
+                while (rdr.Read())
+                {
+                    fullname = rdr.GetString(ordinal: 0) + " " + rdr.GetString(ordinal: 1);
+                }
+            }*/
+
+            
+
+            return cmd.ExecuteScalar().ToString();
+        }
+        public void Is_customer_admin(string email)
+        {
+            using var con = new NpgsqlConnection(connection);
+            con.Open();
+            //string sql = //Select 
+            //måste göra en table och en function som returnerar true/false.
+
         }
 
 
