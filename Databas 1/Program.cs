@@ -24,12 +24,12 @@ namespace Databas_1
             User
         }
         public static State currentstate;
-        
+
 
 
         static void Main(string[] args)
         {
-            bool Admin=false;
+            bool Admin = false;
             string connection = "Server=pgserver.mau.se;Port=5432;User Id = am3740; Password=cf0py2ta;Database=miint2;";
             Databas databas1 = new Databas();
             currentstate = State.Start;
@@ -44,38 +44,6 @@ namespace Databas_1
                     break;
 
 
-            }
-            void Login()
-            {
-                Console.WriteLine("Enter your details: (email, password) " +
-                               "\n Note: Use commas(,) between the values.\n");
-
-                string[] info = Console.ReadLine().Split(",");
-                var con = new NpgsqlConnection(connection);
-                con.Open();
-                string sql = "Select function_username_password(@email, @password)";
-                var cmd = new NpgsqlCommand(sql, con);
-                cmd.Parameters.AddWithValue(parameterName: "@email", info[0]);
-                cmd.Parameters.AddWithValue(parameterName: "@password", info[1]);
-                string[] input = Console.ReadLine().Split(",");
-
-                NpgsqlDataReader rdr = cmd.ExecuteReader();
-                while (rdr.Read())
-                {
-                    Console.WriteLine("----------------------"); //kanske console.clear();
-
-
-                    if (rdr.GetBoolean(ordinal: 0) == true)
-                    {
-                        Console.WriteLine("Welcome: " + databas1.Get_Customer_name(info[0]));
-                    }
-                    else
-                    {
-                        Start();
-                    }
-
-
-                }
             }
             void Start()
             {
@@ -100,6 +68,40 @@ namespace Databas_1
                 else if (choice.Equals("4"))
                 {
                     View();
+                }
+            }
+            void Login()
+            {
+                Console.WriteLine("Enter your details: (email, password) " +
+                               "\n Note: Use commas(,) between the values.\n");
+
+                string[] info = Console.ReadLine().Split(",");
+                var con = new NpgsqlConnection(connection);
+                con.Open();
+                string sql = "Select function_username_password(@email, @password)";
+                var cmd = new NpgsqlCommand(sql, con);
+                cmd.Parameters.AddWithValue(parameterName: "@email", info[0]);
+                cmd.Parameters.AddWithValue(parameterName: "@password", info[1]);
+                string[] input = Console.ReadLine().Split(",");
+
+                NpgsqlDataReader rdr = cmd.ExecuteReader();
+                while (rdr.Read())
+                {
+                    Console.WriteLine("----------------------"); //kanske console.clear();
+                    if (rdr.GetBoolean(ordinal: 0) == true)
+                    {
+                        if (databas1.Is_customer_admin(info[0]))
+                        {
+                            Console.WriteLine("Welcome Admin: " + databas1.Get_Customer_name(info[0])[0] + databas1.Get_Customer_name(info[0])[1]);
+                            Admin = true;
+                        }
+                        else
+                            Console.WriteLine("Welcome: " + databas1.Get_Customer_name(info[0])[0] + databas1.Get_Customer_name(info[0])[1]);
+                    }
+                    else
+                    {
+                        Start();
+                    }
                 }
             }
             void Register()
@@ -346,35 +348,41 @@ namespace Databas_1
             command.Parameters.AddWithValue(parameterName: "@password", password);
             transaction.Commit();
         }
-        public string Get_Customer_name(string email)
+        public string[] Get_Customer_name(string email)
         {
-            string fullname = null;
+            string[] names = new string[2];
             using var con = new NpgsqlConnection(connection);
             con.Open();
-            
             string SQL = "Select customer.f_namn, customer.l_namn from customer where customer.email = " + email;
             using var cmd = new NpgsqlCommand(SQL, con);
+            using NpgsqlDataReader rdr = cmd.ExecuteReader();
+            names[0] = rdr.GetString(ordinal: 0);
+                names[1] = rdr.GetString(ordinal: 1);
+                
             
-            /*using NpgsqlDataReader rdr = cmd.ExecuteReader();
-            if (rdr.HasRows)
-            {
-                while (rdr.Read())
-                {
-                    fullname = rdr.GetString(ordinal: 0) + " " + rdr.GetString(ordinal: 1);
-                }
-            }*/
+            con.Close();
 
-            
-
-            return cmd.ExecuteScalar().ToString();
+            return names;
         }
-        public void Is_customer_admin(string email)
+        public bool Is_customer_admin(string email)
         {
+            bool value = false;
             using var con = new NpgsqlConnection(connection);
             con.Open();
-            //string sql = //Select 
-            //måste göra en table och en function som returnerar true/false.
-
+            string sql = "Select is_customer_admin(@email)";
+            NpgsqlCommand command = new NpgsqlCommand(sql, con);
+            command.Parameters.AddWithValue(parameterName: "@email", email);
+            using NpgsqlDataReader rdr = command.ExecuteReader();
+            while (rdr.Read())
+            {
+                value = rdr.GetBoolean(ordinal: 0);
+            }
+            if (value)
+            {
+                return value;
+            }
+            else
+                return false;
         }
 
 
